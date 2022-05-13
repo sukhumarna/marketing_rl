@@ -1,18 +1,25 @@
 import numpy as np
+from enum import Enum
 from gym import spaces
 from gym.core import Env
-from sklearn.metrics import classification_report, roc_auc_score
+from sklearn.metrics import classification_report
+
+
+class EnvMode(Enum):
+    TRAIN = 1
+    TEST = 2
 
 
 class BiClassEnvironment(Env):
 
-    def __init__(self, data_x, data_y, pos_neg_ratio):
+    def __init__(self, data_x, data_y, pos_neg_ratio, mode=EnvMode.TRAIN):
         super(BiClassEnvironment, self).__init__()
         if data_x.shape[0] != data_y.shape[0]:
             raise ValueError("len of data_x and data_y is not equal")
         self.data_x = data_x
         self.data_y = data_y
         self.reward_ratio = pos_neg_ratio
+        self.mode = mode
 
         self.num_classes = len(set(self.data_y))
         if self.num_classes != 2:
@@ -30,6 +37,7 @@ class BiClassEnvironment(Env):
         np.random.seed(seed)
 
     def step(self, action):
+        info = {}
         terminal = False
         self.actions.append(action)
         # positive class
@@ -39,7 +47,9 @@ class BiClassEnvironment(Env):
                 reward = 1
             else:
                 reward = -1
-                terminal = True
+                # TODO should stop the episode or not
+                if self.mode == EnvMode.TRAIN:
+                    terminal = True
         # negative class
         else:
             # if correct prediction set reward to reward ratio, otherwise minus reward ratio
@@ -51,20 +61,21 @@ class BiClassEnvironment(Env):
         self.time_step = self.time_step + 1
 
         # finish all samples, set terminal to true (finish the episode)
-        next_state = None
         if self.time_step == self.episode_len:
             terminal = True
+            report = self.info()
+            label_1 = report['1']
+            info['precision'], info['recall'] = label_1['precision'], label_1['recall']
+            info['f1-score'] = label_1['f1-score']
+            next_state = self.data_x[self.index[0]]
         else:
             next_state = self.data_x[self.index[self.time_step]]
 
-        return next_state, reward, terminal
+        return next_state, reward, terminal, info
 
     def render(self, mode="human"):
-        print('at time step {}/{}'.format(self.time_step, self.episode_len))
-        print(classification_report(self.data_y[self.index], self.actions))
-        rocauc = roc_auc_score(self.data_y[self.index], self.actions)
-        print('rocauc score is', rocauc)
-        return rocauc
+        if self.time_step > 0 and self.time_step % 5000 == 0:
+            print('at time step {}/{}'.format(self.time_step, self.episode_len))
 
     def reset(self):
         np.random.shuffle(self.index)
@@ -72,4 +83,8 @@ class BiClassEnvironment(Env):
         self.actions = []
         return self.data_x[self.index[self.time_step]]
 
-
+    def info(self):
+        report = classification_report(self.data_y[self.index[:self.time_step]],
+                                       self.actions,
+                                       output_dict=True)
+        return report

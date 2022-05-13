@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import unittest
 from gym import spaces
-from environment.biclass_env import BiClassEnvironment
+from environment.biclass_env import BiClassEnvironment, EnvMode
 
 
 class TestBiClassEnvironment(unittest.TestCase):
@@ -43,31 +43,36 @@ class TestBiClassEnvironment(unittest.TestCase):
         env.index = np.arange(5)
 
         # case correct positive class
-        next_state, reward, terminal = env.step(action=1)
+        next_state, reward, terminal, info = env.step(action=1)
         self.assertEqual(reward, 1)
         self.assertTrue(np.array_equal(np.array([0.2, 2.0]), next_state))
         self.assertFalse(terminal)
 
         # case correct negative class
-        next_state, reward, terminal = env.step(action=0)
+        next_state, reward, terminal, info = env.step(action=0)
         self.assertAlmostEqual(reward, self.pos_neg_ratio, places=2)
         self.assertFalse(terminal)
 
         # case incorrect negative class (action=1, actual=0)
-        next_state, reward, terminal = env.step(action=1)
+        next_state, reward, terminal, info = env.step(action=1)
         self.assertAlmostEqual(reward, -self.pos_neg_ratio, places=2)
         self.assertFalse(terminal)
 
         # case incorrect positive class (action=0, actual=1)
-        next_state, reward, terminal = env.step(action=0)
+        next_state, reward, terminal, info = env.step(action=0)
         self.assertEqual(reward, -1)
         self.assertTrue(terminal)
 
         # correct prediction, last step in the episode
-        next_state, reward, terminal = env.step(action=0)
+        next_state, reward, terminal, info = env.step(action=0)
         self.assertAlmostEqual(reward, self.pos_neg_ratio, places=2)
         self.assertTrue(terminal)
-        self.assertIsNone(next_state)
+        self.assertTrue(np.array_equal(np.array([0.1, 1.0]), next_state))
+
+        env = BiClassEnvironment(self.data_x, self.data_y, self.pos_neg_ratio, mode=EnvMode.TEST)
+        next_state, reward, terminal, info = env.step(action=0)
+        self.assertEqual(reward, -1)
+        self.assertFalse(terminal)
 
     def test_reset(self):
         env = BiClassEnvironment(self.data_x, self.data_y, self.pos_neg_ratio)
@@ -98,8 +103,19 @@ class TestBiClassEnvironment(unittest.TestCase):
         actions = [0, 0, 0, 1, 1]
         for a in actions:
             env.step(action=a)
-        rocauc = env.render()
-        self.assertAlmostEqual(rocauc, 0.583, places=3)
+
+    def test_info(self):
+        env = BiClassEnvironment(self.data_x, self.data_y, self.pos_neg_ratio)
+        env.index = np.arange(5)
+        # actual:        [1, 0, 0, 1, 0]
+        # prediction:    [1, 0, 0, 0, 1]
+        actions = [1, 0, 0, 0, 1]
+        for a in actions:
+            env.step(action=a)
+        report = env.info()
+        label_1 = report['1']
+        self.assertAlmostEqual(label_1['recall'], 0.50, places=2)
+        self.assertAlmostEqual(label_1['precision'], 0.50, places=2)
 
 
 if __name__ == '__main__':
