@@ -1,13 +1,8 @@
 import numpy as np
-from enum import Enum
+from environment.env_mode import EnvMode
 from gym import spaces
 from gym.core import Env
 from sklearn.metrics import classification_report
-
-
-class EnvMode(Enum):
-    TRAIN = 1
-    TEST = 2
 
 
 class BiClassEnvironment(Env):
