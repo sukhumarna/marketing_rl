@@ -7,7 +7,7 @@ from sklearn.metrics import classification_report
 
 class BiClassEnvironment(Env):
 
-    def __init__(self, data_x, data_y, pos_neg_ratio, mode=EnvMode.TRAIN):
+    def __init__(self, data_x, data_y, pos_neg_ratio, mode=EnvMode.TRAIN, early_stop=None):
         super(BiClassEnvironment, self).__init__()
         if data_x.shape[0] != data_y.shape[0]:
             raise ValueError("len of data_x and data_y is not equal")
@@ -15,6 +15,8 @@ class BiClassEnvironment(Env):
         self.data_y = data_y
         self.reward_ratio = pos_neg_ratio
         self.mode = mode
+        self.early_stop = early_stop
+        self.pos_miss_count = 0
 
         self.num_classes = len(set(self.data_y))
         if self.num_classes != 2:
@@ -42,9 +44,10 @@ class BiClassEnvironment(Env):
                 reward = 1
             else:
                 reward = -1
-                # TODO should stop the episode or not
-                if self.mode == EnvMode.TRAIN:
-                    terminal = True
+                if self.mode == EnvMode.TRAIN and self.early_stop is not None:
+                    self.pos_miss_count += 1
+                    if self.pos_miss_count > self.early_stop:
+                        terminal = True
         # negative class
         else:
             # if correct prediction set reward to reward ratio, otherwise minus reward ratio
@@ -76,6 +79,7 @@ class BiClassEnvironment(Env):
         np.random.shuffle(self.index)
         self.time_step = 0
         self.actions = []
+        self.pos_miss_count = 0
         return self.data_x[self.index[self.time_step]]
 
     def info(self):

@@ -38,7 +38,7 @@ class TestBiClassEnvironment(unittest.TestCase):
                           data_x=data_x, data_y=data_y, pos_neg_ratio=pos_neg_ratio)
 
     def test_step(self):
-        env = BiClassEnvironment(self.data_x, self.data_y, self.pos_neg_ratio)
+        env = BiClassEnvironment(self.data_x, self.data_y, self.pos_neg_ratio, early_stop=0)
         # set index in order to test in sequence
         env.index = np.arange(5)
 
@@ -72,6 +72,14 @@ class TestBiClassEnvironment(unittest.TestCase):
         env = BiClassEnvironment(self.data_x, self.data_y, self.pos_neg_ratio, mode=EnvMode.TEST)
         next_state, reward, terminal, info = env.step(action=0)
         self.assertEqual(reward, -1)
+        self.assertFalse(terminal)
+
+        env = BiClassEnvironment(self.data_x, self.data_y, self.pos_neg_ratio, mode=EnvMode.TRAIN, early_stop=10)
+        env.index = np.arange(5)
+        # case incorrect positive class
+        next_state, reward, terminal, info = env.step(action=0)
+        self.assertEqual(reward, -1)
+        self.assertTrue(np.array_equal(np.array([0.2, 2.0]), next_state))
         self.assertFalse(terminal)
 
     def test_reset(self):
