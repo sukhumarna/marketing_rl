@@ -71,7 +71,7 @@ class BiClassEnvironment(Env):
 
         return next_state, reward, terminal, info
 
-    def render(self, mode="human"):
+    def render(self, mode="human", **kwargs):
         if self.time_step > 0 and self.time_step % 5000 == 0:
             print('at time step {}/{}'.format(self.time_step, self.episode_len))
 

@@ -7,7 +7,7 @@ from sklearn.metrics import classification_report
 
 class FlexiBiClassEnvironment(Env):
 
-    def __init__(self, data_x, data_y, pos_neg_ratio, reward, mode=EnvMode.TRAIN, early_stop=None):
+    def __init__(self, data_x, data_y, pos_neg_ratio, reward, mode=EnvMode.TRAIN, early_stop=None, render_step=1000):
         super(FlexiBiClassEnvironment, self).__init__()
         if data_x.shape[0] != data_y.shape[0]:
             raise ValueError("len of data_x and data_y is not equal")
@@ -25,6 +25,7 @@ class FlexiBiClassEnvironment(Env):
         self.action_space = spaces.Discrete(self.num_classes)
         self.time_step = 0
         self.early_stop = early_stop
+        self.render_step = render_step
 
         self.actions = []
         self.seed()
@@ -80,10 +81,15 @@ class FlexiBiClassEnvironment(Env):
         return next_state, reward, terminal, info
 
     def reset(self):
-        pass
+        np.random.shuffle(self.index)
+        self.time_step = 0
+        self.actions = []
+        self.pos_miss_count = 0
+        return self.data_x[self._get_index()]
 
     def render(self, mode="human"):
-        pass
+        if self.time_step > 0 and self.time_step % self.render_step == 0:
+            print('at time step {}/{}'.format(self.time_step, self.episode_len))
 
     def info(self):
         report = classification_report(self.data_y[self.index[:self.time_step]],

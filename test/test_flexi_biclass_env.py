@@ -1,6 +1,6 @@
 import numpy as np
 import unittest
-from environment.flexi_biclass_env import FlexiBiClassEnvironment, EnvMode
+from environment.flexi_biclass_env import FlexiBiClassEnvironment
 
 
 class TestFlexiBiClassEnvironment(unittest.TestCase):
@@ -99,6 +99,29 @@ class TestFlexiBiClassEnvironment(unittest.TestCase):
         for i in range(4):
             _, _, terminal, _ = env.step(action=0)
             self.assertFalse(terminal)
+
+    def test_reset(self):
+        env = FlexiBiClassEnvironment(data_x=self.data_x, data_y=self.data_y, pos_neg_ratio=self.pos_neg_ratio,
+                                      reward=self.reward, early_stop=5)
+
+        env.step(action=0)
+        env.step(action=0)
+        self.assertEqual(env._get_index(), 2)
+        self.assertEqual(env.pos_miss_count, 1)
+        self.assertEqual(env.actions, [0, 0])
+        self.assertEqual(env.time_step, 2)
+
+        state = env.reset()
+        self.assertEqual(env.actions, [])
+        self.assertEqual(env.time_step, 0)
+        self.assertTrue(np.array_equal(self.data_x[env._get_index()], state))
+
+    def test_render(self):
+        env = FlexiBiClassEnvironment(data_x=self.data_x, data_y=self.data_y, pos_neg_ratio=self.pos_neg_ratio,
+                                      reward=self.reward, early_stop=None, render_step=2)
+        env.step(action=0)
+        env.step(action=0)
+        env.render(mode='human')
 
 
 if __name__ == '__main__':
