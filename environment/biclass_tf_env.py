@@ -91,4 +91,3 @@ class BiClassTFEnv(py_environment.PyEnvironment):
         self._episode_ended = False
         self._state = self._data_x[self._get_index()]
         return ts.restart(np.array(self._state, dtype=float))
-        
