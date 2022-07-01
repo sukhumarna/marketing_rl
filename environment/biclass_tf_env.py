@@ -1,5 +1,4 @@
 import numpy as np
-from typing import Any
 from tf_agents.environments import py_environment
 from tf_agents.trajectories import time_step as ts
 from tf_agents.typing import types
